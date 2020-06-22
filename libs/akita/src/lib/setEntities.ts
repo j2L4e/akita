@@ -8,7 +8,7 @@ export type SetEntities<Entity> = Entity[] | Entities<Entity> | HashMap<Entity>;
 export type SetEntitiesParams<State, Entity> = {
   state: State;
   entities: SetEntities<Entity>;
-  idKey: string;
+  getId: (entity: Entity) => string | number;
   preAddEntity: PreAddEntity<Entity>;
   isNativePreAdd?: boolean;
 };
@@ -29,12 +29,12 @@ function applyMiddleware<E>(entities: HashMap<E>, preAddEntity: PreAddEntity<E>)
 }
 
 // @internal
-export function setEntities<S extends EntityState<E>, E>({ state, entities, idKey, preAddEntity, isNativePreAdd }: SetEntitiesParams<S, E>): S {
+export function setEntities<S extends EntityState<E>, E>({ state, entities, getId, preAddEntity, isNativePreAdd }: SetEntitiesParams<S, E>): S {
   let newEntities: HashMap<E>;
   let newIds: ID[];
 
   if (isArray(entities)) {
-    const resolve = toEntitiesObject(entities, idKey, preAddEntity);
+    const resolve = toEntitiesObject(entities, getId, preAddEntity);
     newEntities = resolve.entities;
     newIds = resolve.ids;
   } else if (isEntityState(entities)) {

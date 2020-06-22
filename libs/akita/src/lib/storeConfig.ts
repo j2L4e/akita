@@ -1,4 +1,5 @@
 import { AkitaConfig } from './config';
+import { ID } from './types';
 
 export type StoreConfigOptions = {
   name: string;
@@ -6,6 +7,8 @@ export type StoreConfigOptions = {
   cache?: { ttl: number };
   deepFreezeFn?: (o: any) => any;
   idKey?: string;
+  getId?: ((entity: any) => ID);
+  setId?: ((entity: any, id: ID) => any);
   producerFn?: AkitaConfig['producerFn'];
 };
 
@@ -15,7 +18,7 @@ export type UpdatableStoreConfigOptions = {
 
 export const configKey = 'akitaConfig';
 
-export function StoreConfig(metadata: StoreConfigOptions) {
+export function StoreConfig<T, IDType>(metadata: StoreConfigOptions) {
   return function(constructor: Function) {
     constructor[configKey] = { idKey: 'id' };
 

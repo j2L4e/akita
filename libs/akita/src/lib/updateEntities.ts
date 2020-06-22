@@ -2,18 +2,19 @@ import { EntityState, ID, PreUpdateEntity, UpdateStateCallback } from './types';
 import { isFunction } from './isFunction';
 import { hasEntity } from './hasEntity';
 import { isPlainObject } from './isPlainObject';
+import { isUndefined } from './isUndefined';
 
 export type UpdateEntitiesParams<State, Entity> = {
   state: State;
   ids: any[];
-  idKey: string;
+  getId: (entity: Entity) => string | number;
   newStateOrFn: UpdateStateCallback<Entity> | Partial<Entity> | Partial<State>;
   preUpdateEntity: PreUpdateEntity<Entity>;
   producerFn;
 };
 
 // @internal
-export function updateEntities<S extends EntityState<E>, E>({ state, ids, idKey, newStateOrFn, preUpdateEntity, producerFn }: UpdateEntitiesParams<S, E>) {
+export function updateEntities<S extends EntityState<E>, E>({ state, ids, getId, newStateOrFn, preUpdateEntity, producerFn }: UpdateEntitiesParams<S, E>) {
   const updatedEntities = {};
 
   let isUpdatingIdKey = false;
@@ -33,13 +34,13 @@ export function updateEntities<S extends EntityState<E>, E>({ state, ids, idKey,
       newState = newStateOrFn;
     }
 
-    const isIdChanged = newState.hasOwnProperty(idKey) && newState[idKey] !== oldEntity[idKey];
+    const isIdChanged = !isUndefined(getId(newState)) && getId(newState) !== getId(oldEntity);
     let newEntity: E;
     idToUpdate = id;
 
     if (isIdChanged) {
       isUpdatingIdKey = true;
-      idToUpdate = newState[idKey];
+      idToUpdate = getId(newState);
     }
 
     const merged = {

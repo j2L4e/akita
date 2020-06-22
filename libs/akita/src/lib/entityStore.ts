@@ -70,6 +70,19 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
     return (this.config as StoreConfigOptions).idKey || this.options.idKey || DEFAULT_ID_KEY;
   }
 
+  // @internal
+  get getId() {
+    return (this.config as StoreConfigOptions).getId || ((entity: any) => entity[this.idKey]);
+  }
+
+  // @internal
+  get setId() {
+    return (this.config as StoreConfigOptions).setId || ((entity: any, id: any) => {
+      entity[this.idKey] = id;
+      return entity as EntityType;
+    });
+  }
+
   /**
    *
    * Replace current collection with provided collection
@@ -92,7 +105,7 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
       const newState = setEntities({
         state,
         entities,
-        idKey: this.idKey,
+        getId: this.getId,
         preAddEntity: this.akitaPreAddEntity,
         isNativePreAdd,
       });
@@ -133,7 +146,7 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
       state: this._value(),
       preAddEntity: this.akitaPreAddEntity,
       entities: collection,
-      idKey: this.idKey,
+      getId: this.getId,
       options,
     });
 
@@ -200,7 +213,7 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
     isDev() && setAction('Update Entity', ids);
     this._setState((state) =>
       updateEntities({
-        idKey: this.idKey,
+        getId: this.getId,
         ids,
         preUpdateEntity: this.akitaPreUpdateEntity,
         state,
@@ -259,7 +272,7 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
     const newEntities = toArray.filter(predicate(false)).map((id) => {
       const newStateObj = typeof newState === 'function' ? newState({}) : newState;
       const entity = isFunction(onCreate) ? onCreate(id, newStateObj) : newStateObj;
-      const withId = { ...entity, [this.idKey]: id };
+      const withId = this.setId({ ...entity }, id as any);
       if (isClassBased) {
         return new baseClass(withId);
       }
@@ -292,19 +305,19 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
     // Update the state directly to optimize performance
     for (const entity of entities) {
       const withPreCheckHook = this.akitaPreCheckEntity(entity);
-      const id = withPreCheckHook[this.idKey];
+      const id = this.getId(withPreCheckHook);
       if (hasEntity(this.entities, id)) {
         const prev = this._value().entities[id];
         const merged = { ...this._value().entities[id], ...withPreCheckHook };
         const next = options.baseClass ? new options.baseClass(merged) : merged;
         const withHook = this.akitaPreUpdateEntity(prev, next);
-        const nextId = withHook[this.idKey];
+        const nextId = this.getId(withHook);
         updatedEntities[nextId] = withHook;
         updatedIds.push(nextId);
       } else {
         const newEntity = options.baseClass ? new options.baseClass(withPreCheckHook) : withPreCheckHook;
         const withHook = this.akitaPreAddEntity(newEntity);
-        const nextId = withHook[this.idKey];
+        const nextId = this.getId(withHook);
         addedIds.push(nextId);
         updatedEntities[nextId] = withHook;
       }
@@ -344,7 +357,7 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
     if (isEmpty(toArray)) return;
     let replaced = {};
     for (const id of toArray) {
-      newState[this.idKey] = id;
+      this.setId(newState, id);
       replaced[id] = newState;
     }
     isDev() && setAction('Replace Entity', ids);
@@ -555,7 +568,12 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
    * }
    */
   createUIStore(initialState = {}, storeConfig: Partial<StoreConfigOptions> = {}) {
-    const defaults: Partial<StoreConfigOptions> = { name: `UI/${this.storeName}`, idKey: this.idKey };
+    const defaults: Partial<StoreConfigOptions> = {
+      name: `UI/${this.storeName}`,
+      idKey: this.idKey,
+      getId: this.getId,
+      setId: this.setId,
+    };
     this.ui = new EntityUIStore(initialState, { ...defaults, ...storeConfig });
     return this.ui;
   }
@@ -612,10 +630,11 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
     const createFn = (id) => {
       const current = this.entities[id];
       const ui = isFunc ? this.ui._akitaCreateEntityFn(current) : this.ui._akitaCreateEntityFn;
-      return {
-        [this.idKey]: current[this.idKey],
+
+      const currentId = this.getId(current);
+      return this.setId({
         ...ui,
-      };
+      }, currentId);
     };
 
     if (add) {
@@ -646,7 +665,7 @@ export class EntityStore<S extends EntityState = any, EntityType = getEntityType
 export class EntityUIStore<UIState, DEPRECATED = any> extends EntityStore<UIState> {
   _akitaCreateEntityFn: EntityUICreateFn;
 
-  constructor(initialState = {}, storeConfig: Partial<StoreConfigOptions> = {}) {
+  constructor(initialState = {}, storeConfig: Partial<StoreConfigOptions<any, any>> = {}) {
     super(initialState, storeConfig);
   }
 

@@ -1,4 +1,4 @@
-import { Todo, TodosStore, TodosStoreCustomID } from './setup';
+import { Todo, TodosStore, TodosStoreCompositeID, TodosStoreCustomID } from './setup';
 
 describe('EntitiesStore', () => {
   let store: TodosStore;
@@ -463,6 +463,22 @@ describe('Custom ID', () => {
 
   it('should add with custom id', () => {
     store2.add([{ todoId: 2, title: '2' } as any]);
+    expect(store2._value().entities[1]).toBeDefined();
+    expect(store2._value().entities[2]).toBeDefined();
+    expect(store2._value().entities[2].title).toEqual('2');
+  });
+});
+
+describe('Composite ID', () => {
+  let store2 = new TodosStoreCompositeID();
+
+  it('should set with composite id', () => {
+    store2.set([{ todoId: 1, versionId: 1, title: '1' }]);
+    expect(store2._value().entities[1]).toBeDefined();
+  });
+
+  it('should add with composite id', () => {
+    store2.add([{ todoId: 1, versionId: 2, title: '2' } as any]);
     expect(store2._value().entities[1]).toBeDefined();
     expect(store2._value().entities[2]).toBeDefined();
     expect(store2._value().entities[2].title).toEqual('2');

@@ -52,6 +52,32 @@ export class TodosStoreCustomID extends EntityStore<StateTwo, TodoCustomID> {
   }
 }
 
+export type TodoCompositeID = {
+  todoId: ID;
+  versionId: ID;
+  title?: string;
+  completed?;
+};
+
+export interface StateThree extends EntityState<TodoCompositeID> {}
+@StoreConfig({
+  name: 'todos',
+  getId: entity => `${entity.versionId}:${entity.todoId}`,
+  setId: (entity, id: string) => {
+    const [versionId, todoId] = id.split(':');
+
+    entity.versionId = versionId;
+    entity.todoId = todoId;
+
+    return entity;
+  }
+})
+export class TodosStoreCompositeID extends EntityStore<StateThree, TodoCompositeID> {
+  constructor() {
+    super({});
+  }
+}
+
 export function createTodos(len) {
   const arr = [];
   const factory = ct();
